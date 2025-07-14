@@ -5,11 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "llm_plx"
 version = "0.1.0"
-dependencies = [
-  "loguru",
-  "python-dotenv",
-  "git+https://github.com/saltchicken/ollama_query",
-]
+dependencies = ["loguru", "python-dotenv"]
 
 [project.scripts]
 llm_plx = "llm_plx.__main__:main"
