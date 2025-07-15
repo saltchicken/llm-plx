@@ -8,14 +8,14 @@ from dotenv import load_dotenv
 import time
 import shutil
 
-class LLM_PLX():
+
+class LLM_PLX:
     def __init__(self, *args, **kwargs):
         self.model = kwargs.get("model", None)
         self.host = kwargs.get("host", None)
         self.temp_dir = tempfile.TemporaryDirectory()
-        self.nvim_path = shutil.which("nvim")
+        self.nvim_path = "/opt/nvim-linux-x86_64/bin/nvim"
         self.init_files()
-        
 
     def init_files(self):
         self.prompt_file = os.path.join(self.temp_dir.name, "prompt")
@@ -23,21 +23,27 @@ class LLM_PLX():
             f.write("")
         self.system_message_file = os.path.join(self.temp_dir.name, "system_message")
         with open(self.system_message_file, "w") as f:
-            f.write("You are a helpful AI assistant. You are given files designated by <files> to read and provide context. You are given <conversation_history> to provide what has already occured between you the AI and the User. Do not mention <conversation_history> or <files> in your response. To the best of your ability provide a response to the prompt designationed by <prompt>. The output must be in markup")
+            f.write(
+                "You are a helpful AI assistant. You are given files designated by <files> to read and provide context. You are given <conversation_history> to provide what has already occured between you the AI and the User. Do not mention <conversation_history> or <files> in your response. To the best of your ability provide a response to the prompt designationed by <prompt>. The output must be in markup"
+            )
         self.context_file = os.path.join(self.temp_dir.name, "context")
         with open(self.context_file, "w") as f:
             f.write("Context: ")
         self.files_file = os.path.join(self.temp_dir.name, "files")
         # with open(self.files_file, "w") as f:
         #     f.write("")
-        self.conversation_history_file = os.path.join(self.temp_dir.name, "conversation_history")
+        self.conversation_history_file = os.path.join(
+            self.temp_dir.name, "conversation_history"
+        )
         with open(self.conversation_history_file, "w") as f:
             f.write("")
         self.output_file = os.path.join(self.temp_dir.name, "output")
         # with open(self.output_file, "w") as f:
         #     f.write("")
         # Get path to the Lua script
-        self.lua_script_path = os.path.join(os.path.dirname(__file__), "context_popup.lua")
+        self.lua_script_path = os.path.join(
+            os.path.dirname(__file__), "context_popup.lua"
+        )
         self.prompt_script_path = os.path.join(os.path.dirname(__file__), "prompt.vim")
         self.output_script_path = os.path.join(os.path.dirname(__file__), "output.vim")
 
@@ -54,19 +60,22 @@ class LLM_PLX():
         context += f"<conversation_history>\n{conversation_history}\n</conversation_history>\n<prompt>\n{prompt}\n</prompt>"
         return context
 
-
-    
     def run(self):
         try:
             while True:
                 result = subprocess.run(
                     [
                         self.nvim_path,
-                        "-c", f"let g:prompt_file = '{self.prompt_file}'",
-                        "-c", f"let g:files_file = '{self.files_file}'",
-                        "-c", f"let g:context_file = '{self.context_file}'",
-                        "-c", f"let g:lua_script_path = '{self.lua_script_path}'",
-                        "-S", self.prompt_script_path,
+                        "-c",
+                        f"let g:prompt_file = '{self.prompt_file}'",
+                        "-c",
+                        f"let g:files_file = '{self.files_file}'",
+                        "-c",
+                        f"let g:context_file = '{self.context_file}'",
+                        "-c",
+                        f"let g:lua_script_path = '{self.lua_script_path}'",
+                        "-S",
+                        self.prompt_script_path,
                         self.system_message_file,
                     ],
                     stdin=sys.stdin,
@@ -74,7 +83,7 @@ class LLM_PLX():
                 )
                 if result.returncode != 0:
                     break
-                
+
                 # Read content from the files
                 with open(self.prompt_file, "r") as f:
                     prompt = f.read().strip()
@@ -89,26 +98,30 @@ class LLM_PLX():
                 with open(self.context_file, "w") as f:
                     f.write(context)
 
-                
                 # Query the AI model
                 print("Querying AI model...", end="", flush=True)
                 try:
-                    response, debug_string = ollama_query(self.model, context, system_message, self.host)
+                    response, debug_string = ollama_query(
+                        self.model, context, system_message, self.host
+                    )
                 except Exception as e:
                     print(f"Error querying model: {e}")
                     continue
-                
+
                 # Create temporary file for output
                 with open(self.output_file, "w") as f:
                     f.write(response)
-                
+
                 # Display the response in neovim (also include context popup functionality)
                 subprocess.run(
                     [
                         self.nvim_path,
-                        "-c", f"let g:context_file = '{self.context_file}'",
-                        "-c", f"let g:lua_script_path = '{self.lua_script_path}'",
-                        "-S", self.output_script_path,
+                        "-c",
+                        f"let g:context_file = '{self.context_file}'",
+                        "-c",
+                        f"let g:lua_script_path = '{self.lua_script_path}'",
+                        "-S",
+                        self.output_script_path,
                         self.output_file,
                     ],
                     stdin=sys.stdin,
@@ -125,6 +138,7 @@ class LLM_PLX():
         finally:
             self.temp_dir.cleanup()
 
+
 def main():
     env_init()
     model = os.getenv(
@@ -134,16 +148,17 @@ def main():
     llm_plx = LLM_PLX(model=model, host=host)
     llm_plx.run()
 
+
 def env_init():
-    env_path = ".env"
+    env_path = os.path.join(os.path.dirname(__file__), ".env")
     if not os.path.exists(env_path):
         host = input("Enter OLLAMA_HOST (e.g., http://localhost:11434): ").strip()
         if not host:
             host = "http://localhost:11434"
         with open(env_path, "w") as f:
-            f.write(f"OLLAMA_HOST={{host}}\\n")
+            f.write(f"OLLAMA_HOST={host}")
     load_dotenv()
+
 
 if __name__ == "__main__":
     main()
-
