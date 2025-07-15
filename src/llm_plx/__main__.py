@@ -26,8 +26,12 @@ def main():
         f.write("You are a helpful AI assistant.")
 
     try:
+        nvim_path = subprocess.check_output(["which", "nvim"], text=True).strip()
+    except Exception as e:
+        nvim_path = "nvim"
+
+    try:
         while True:
-            nvim_path = subprocess.check_output(["which", "nvim"], text=True).strip()
             # nvim_path = "/opt/nvim-linux-x86_64/bin/nvim"
             result = subprocess.run(
                 [
