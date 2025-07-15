@@ -6,6 +6,7 @@ import subprocess
 from ollama_query import ollama_query
 from dotenv import load_dotenv
 import time
+import shutil
 
 
 def main():
@@ -25,10 +26,7 @@ def main():
     with open(system_message_file.name, "w") as f:
         f.write("You are a helpful AI assistant.")
 
-    try:
-        nvim_path = subprocess.check_output(["which", "nvim"], text=True).strip()
-    except Exception as e:
-        nvim_path = "nvim"
+    nvim_path = shutil.which("nvim")
 
     try:
         while True:
