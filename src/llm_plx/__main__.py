@@ -17,12 +17,16 @@ class LLM_PLX():
         with open(self.system_message_file.name, "w") as f:
             f.write("You are a helpful AI assistant.")
         self.context_file = tempfile.NamedTemporaryFile(delete=False)
+        with open(self.context_file.name, "w") as f:
+            f.write("Context: ")
         self.files_file = tempfile.NamedTemporaryFile(delete=False)
         self.output_file = tempfile.NamedTemporaryFile(delete=False)
         self.nvim_path = shutil.which("nvim")
         
         # Get path to the Lua script
         self.lua_script_path = os.path.join(os.path.dirname(__file__), "context_popup.lua")
+        self.prompt_script_path = os.path.join(os.path.dirname(__file__), "prompt.vim")
+        self.output_script_path = os.path.join(os.path.dirname(__file__), "output.vim")
     
     def run(self):
         try:
@@ -30,12 +34,11 @@ class LLM_PLX():
                 result = subprocess.run(
                     [
                         self.nvim_path,
-                        "-c", "set nonumber norelativenumber wrap | resize 20",
-                        "-c", f"split {self.prompt_file.name} | wincmd k",
-                        "-c", f"vsplit {self.files_file.name} | FileSelector",
-                        "-c", "command! Send wa | qall | cquit 0",
-                        "-c", "command! Exit cquit 1",
-                        "-c", f"let g:llm_plx_context_file = '{self.context_file.name}' | luafile {self.lua_script_path}",
+                        "-c", f"let g:prompt_file = '{self.prompt_file.name}'",
+                        "-c", f"let g:files_file = '{self.files_file.name}'",
+                        "-c", f"let g:context_file = '{self.context_file.name}'",
+                        "-c", f"let g:lua_script_path = '{self.lua_script_path}'",
+                        "-S", self.prompt_script_path,
                         self.system_message_file.name,
                     ],
                     stdin=sys.stdin,
@@ -66,7 +69,9 @@ class LLM_PLX():
                 subprocess.run(
                     [
                         self.nvim_path,
-                        "-c", f"set nonumber norelativenumber wrap | let g:llm_plx_context_file = '{self.context_file.name}' | luafile {self.lua_script_path}",
+                        "-c", f"let g:context_file = '{self.context_file.name}'",
+                        "-c", f"let g:lua_script_path = '{self.lua_script_path}'",
+                        "-S", self.output_script_path,
                         self.output_file.name,
                     ],
                     stdin=sys.stdin,
