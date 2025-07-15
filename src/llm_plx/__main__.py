@@ -23,7 +23,7 @@ class LLM_PLX():
             f.write("")
         self.system_message_file = os.path.join(self.temp_dir.name, "system_message")
         with open(self.system_message_file, "w") as f:
-            f.write("You are a helpful AI assistant. You are given files designated by <files> to read and provide context. You are given <conversation_history> to provide what has already occured between you the AI and the User. Do not mention <conversation_history> or <files> in your response. To the best of your ability provide a response to the prompt designationed by <prompt>")
+            f.write("You are a helpful AI assistant. You are given files designated by <files> to read and provide context. You are given <conversation_history> to provide what has already occured between you the AI and the User. Do not mention <conversation_history> or <files> in your response. To the best of your ability provide a response to the prompt designationed by <prompt>. The output must be in markup")
         self.context_file = os.path.join(self.temp_dir.name, "context")
         with open(self.context_file, "w") as f:
             f.write("Context: ")
@@ -146,3 +146,4 @@ def env_init():
 
 if __name__ == "__main__":
     main()
+
