@@ -11,6 +11,18 @@ import shutil
 
 def main():
     # Load environment variables from .env
+    # Path to .env file
+    env_path = ".env"
+
+    # If the .env file doesn't exist, ask the user and create it
+    if not os.path.exists(env_path):
+        host = input("Enter OLLAMA_HOST (e.g., http://localhost:11434): ").strip()
+        if not host:
+            host = "http://localhost:11434"
+        with open(env_path, "w") as f:
+            f.write(f"OLLAMA_HOST={host}\n")
+
+    # Load environment variables
     load_dotenv()
 
     # Get model and host from environment or use defaults
@@ -23,6 +35,7 @@ def main():
     prompt_file = tempfile.NamedTemporaryFile(delete=False)
     system_message_file = tempfile.NamedTemporaryFile(delete=False)
     context_file = tempfile.NamedTemporaryFile(delete=False)
+    output_file = tempfile.NamedTemporaryFile(delete=False)
     with open(system_message_file.name, "w") as f:
         f.write("You are a helpful AI assistant.")
 
@@ -72,7 +85,6 @@ def main():
             response, debug_string = ollama_query(model, prompt, system_message, host)
 
             # Create temporary file for output
-            output_file = tempfile.NamedTemporaryFile(delete=False)
             with open(output_file.name, "w") as f:
                 f.write(response)
 
