@@ -8,13 +8,102 @@ from dotenv import load_dotenv
 import time
 import shutil
 
+class LLM_PLX():
+    def __init__(self, *args, **kwargs):
+        self.model = kwargs.get("model", None)
+        self.host = kwargs.get("host", None)
+        self.prompt_file = tempfile.NamedTemporaryFile(delete=False)
+        self.system_message_file = tempfile.NamedTemporaryFile(delete=False)
+        with open(self.system_message_file.name, "w") as f:
+            f.write("You are a helpful AI assistant.")
+        self.context_file = tempfile.NamedTemporaryFile(delete=False)
+        self.output_file = tempfile.NamedTemporaryFile(delete=False)
+
+        self.nvim_path = shutil.which("nvim")
+
+    def run(self):
+        try:
+            while True:
+                result = subprocess.run(
+                    [
+                        self.nvim_path,
+                        "-c",
+                        "set nonumber norelativenumber wrap",
+                        "-c",
+                        "resize 20",
+                        "-c",
+                        f"split {self.prompt_file.name}",
+                        "-c",
+                        "wincmd k",
+                        "-c",
+                        f"vsplit {self.context_file.name}",
+                        "-c",
+                        "FileSelector",
+                        "-c",
+                        "wincmd j",
+                        "-c",
+                        "command! Send wa | qall | cquit 0",
+                        "-c",
+                        "command! Exit cquit 1",
+                        self.system_message_file.name,
+                    ],
+                    stdin=sys.stdin,
+                    stdout=sys.stdout,
+                )
+
+                if result.returncode != 0:
+                    break
+
+                # Read content from the files
+                with open(self.prompt_file.name, "r") as f:
+                    prompt = f.read().strip()
+
+                with open(self.system_message_file.name, "r") as f:
+                    system_message = f.read().strip()
+
+                # Query the AI model
+                print("Querying AI model...", end="", flush=True)
+                response, debug_string = ollama_query(self.model, prompt, system_message, self.host)
+
+                # Create temporary file for output
+                with open(self.output_file.name, "w") as f:
+                    f.write(response)
+
+                # Display the response in neovim
+                subprocess.run(
+                    [
+                        self.nvim_path,
+                        "-c",
+                        "set nonumber norelativenumber wrap",
+                        self.output_file.name,
+                    ],
+                    stdin=sys.stdin,
+                    stdout=sys.stdout,
+                )
+
+        finally:
+            # Clean up temporary files
+            for file in [self.prompt_file.name, self.system_message_file.name, self.context_file.name, self.output_file.name]:
+                try:
+                    os.unlink(file)
+                except (NameError, OSError):
+                    pass
+
 
 def main():
-    # Load environment variables from .env
-    # Path to .env file
+    env_init()
+    model = os.getenv(
+        "OLLAMA_MODEL", "hf.co/unsloth/Devstral-Small-2507-GGUF:UD-Q4_K_XL"
+    )
+    host = os.getenv("OLLAMA_HOST", "localhost")
+    llm_plx = LLM_PLX(model=model, host=host)
+    llm_plx.run()
+
+
+
+def env_init():
     env_path = ".env"
 
-    # If the .env file doesn't exist, ask the user and create it
     if not os.path.exists(env_path):
         host = input("Enter OLLAMA_HOST (e.g., http://localhost:11434): ").strip()
         if not host:
@@ -22,92 +111,7 @@ def main():
         with open(env_path, "w") as f:
             f.write(f"OLLAMA_HOST={host}\n")
 
-    # Load environment variables
     load_dotenv()
-
-    # Get model and host from environment or use defaults
-    model = os.getenv(
-        "OLLAMA_MODEL", "hf.co/unsloth/Devstral-Small-2507-GGUF:UD-Q4_K_XL"
-    )
-    host = os.getenv("OLLAMA_HOST", "localhost")
-
-    # Create temporary files
-    prompt_file = tempfile.NamedTemporaryFile(delete=False)
-    system_message_file = tempfile.NamedTemporaryFile(delete=False)
-    context_file = tempfile.NamedTemporaryFile(delete=False)
-    output_file = tempfile.NamedTemporaryFile(delete=False)
-    with open(system_message_file.name, "w") as f:
-        f.write("You are a helpful AI assistant.")
-
-    nvim_path = shutil.which("nvim")
-
-    try:
-        while True:
-            result = subprocess.run(
-                [
-                    nvim_path,
-                    "-c",
-                    "set nonumber norelativenumber wrap",
-                    "-c",
-                    "resize 20",
-                    "-c",
-                    f"split {prompt_file.name}",
-                    "-c",
-                    "wincmd k",
-                    "-c",
-                    f"vsplit {context_file.name}",
-                    "-c",
-                    "FileSelector",
-                    "-c",
-                    "wincmd j",
-                    "-c",
-                    "command! Send wa | qall | cquit 0",
-                    "-c",
-                    "command! Exit cquit 1",
-                    system_message_file.name,
-                ],
-                stdin=sys.stdin,
-                stdout=sys.stdout,
-            )
-
-            if result.returncode != 0:
-                break
-
-            # Read content from the files
-            with open(prompt_file.name, "r") as f:
-                prompt = f.read().strip()
-
-            with open(system_message_file.name, "r") as f:
-                system_message = f.read().strip()
-
-            # Query the AI model
-            print("Querying AI model...", end="", flush=True)
-            response, debug_string = ollama_query(model, prompt, system_message, host)
-
-            # Create temporary file for output
-            with open(output_file.name, "w") as f:
-                f.write(response)
-
-            # Display the response in neovim
-            subprocess.run(
-                [
-                    nvim_path,
-                    "-c",
-                    "set nonumber norelativenumber wrap",
-                    output_file.name,
-                ],
-                stdin=sys.stdin,
-                stdout=sys.stdout,
-            )
-
-    finally:
-        # Clean up temporary files
-        for file in [prompt_file.name, system_message_file.name, output_file.name]:
-            try:
-                os.unlink(file)
-            except (NameError, OSError):
-                pass
-
 
 if __name__ == "__main__":
     main()
