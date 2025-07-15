@@ -62,6 +62,8 @@ function M.show_context_popup(context_file_path)
 
 	-- Create the popup window
 	local win = vim.api.nvim_open_win(buf, true, opts)
+	vim.api.nvim_set_hl(0, "LlmPlxPopup", { link = "Normal" })
+	vim.api.nvim_win_set_option(win, "winhighlight", "Normal:LlmPlxPopup")
 
 	-- Set window-specific options
 	vim.api.nvim_win_set_option(win, "wrap", true)
