@@ -54,16 +54,17 @@ function M.show_context_popup(context_file_path)
 		height = height,
 		row = row,
 		col = col,
-		style = "minimal",
-		border = "rounded",
+		
+		border = "single",
 		title = " Context ",
 		title_pos = "center",
 	}
 
 	-- Create the popup window
 	local win = vim.api.nvim_open_win(buf, true, opts)
-	vim.api.nvim_set_hl(0, "LlmPlxPopup", { link = "Normal" })
-	vim.api.nvim_win_set_option(win, "winhighlight", "Normal:LlmPlxPopup")
+	vim.api.nvim_set_hl(0, "LlmPlxPopup", { bg = "none" })
+	vim.api.nvim_set_hl(0, "LlmPlxPopupBorder", { bg = "none" })
+	vim.api.nvim_win_set_option(win, "winhighlight", "Normal:LlmPlxPopup,FloatBorder:LlmPlxPopupBorder")
 
 	-- Set window-specific options
 	vim.api.nvim_win_set_option(win, "wrap", true)
