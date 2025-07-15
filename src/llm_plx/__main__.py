@@ -30,7 +30,6 @@ def main():
 
     try:
         while True:
-            # nvim_path = "/opt/nvim-linux-x86_64/bin/nvim"
             result = subprocess.run(
                 [
                     nvim_path,
