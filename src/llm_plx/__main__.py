@@ -13,9 +13,14 @@ class LLM_PLX():
         self.model = kwargs.get("model", None)
         self.host = kwargs.get("host", None)
         self.temp_dir = tempfile.TemporaryDirectory()
+        self.nvim_path = shutil.which("nvim")
+        self.init_files()
+        
+
+    def init_files(self):
         self.prompt_file = os.path.join(self.temp_dir.name, "prompt")
-        # with open(self.prompt_file, "w") as f:
-        #     f.write("")
+        with open(self.prompt_file, "w") as f:
+            f.write("")
         self.system_message_file = os.path.join(self.temp_dir.name, "system_message")
         with open(self.system_message_file, "w") as f:
             f.write("You are a helpful AI assistant. You are given files designated by <files> to read and provide context. You are given <conversation_history> to provide what has already occured between you the AI and the User. Do not mention <conversation_history> or <files> in your response. To the best of your ability provide a response to the prompt designationed by <prompt>")
@@ -31,12 +36,25 @@ class LLM_PLX():
         self.output_file = os.path.join(self.temp_dir.name, "output")
         # with open(self.output_file, "w") as f:
         #     f.write("")
-        self.nvim_path = shutil.which("nvim")
-        
         # Get path to the Lua script
         self.lua_script_path = os.path.join(os.path.dirname(__file__), "context_popup.lua")
         self.prompt_script_path = os.path.join(os.path.dirname(__file__), "prompt.vim")
         self.output_script_path = os.path.join(os.path.dirname(__file__), "output.vim")
+
+    def write_context(self, files, conversation_history, prompt):
+        context = "<files>\n"
+        for file in files.split("\n"):
+            if not os.path.exists(file):
+                print(f"File {file} does not exist. Skipping...", end="", flush=True)
+                continue
+            with open(file, "r") as f:
+                context += f"<filename>{file}</filename>\n"
+                context += f"<filecontent>\n{f.read()}\n</filecontent>\n"
+        context += "</files>\n"
+        context += f"<conversation_history>\n{conversation_history}\n</conversation_history>\n<prompt>\n{prompt}\n</prompt>"
+        return context
+
+
     
     def run(self):
         try:
@@ -67,18 +85,10 @@ class LLM_PLX():
                 with open(self.files_file, "r") as f:
                     files = f.read().strip()
 
-                context = "<files>\n"
-                for file in files.split("\n"):
-                    if not os.path.exists(file):
-                        print(f"File {file} does not exist. Skipping...", end="", flush=True)
-                        continue
-                    with open(file, "r") as f:
-                        context += f"<filename>{file}</filename>\n"
-                        context += f"<filecontent>\n{f.read()}\n</filecontent>\n"
-                context += "</files>\n"
-                context += f"<conversation_history>\n{conversation_history}\n</conversation_history>\n<prompt>\n{prompt}\n</prompt>"
+                context = self.write_context(files, conversation_history, prompt)
                 with open(self.context_file, "w") as f:
                     f.write(context)
+
                 
                 # Query the AI model
                 print("Querying AI model...", end="", flush=True)
