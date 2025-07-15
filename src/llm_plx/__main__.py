@@ -12,15 +12,22 @@ class LLM_PLX():
     def __init__(self, *args, **kwargs):
         self.model = kwargs.get("model", None)
         self.host = kwargs.get("host", None)
-        self.prompt_file = tempfile.NamedTemporaryFile(delete=False)
-        self.system_message_file = tempfile.NamedTemporaryFile(delete=False)
-        with open(self.system_message_file.name, "w") as f:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.prompt_file = os.path.join(self.temp_dir.name, "prompt")
+        # with open(self.prompt_file, "w") as f:
+        #     f.write("")
+        self.system_message_file = os.path.join(self.temp_dir.name, "system_message")
+        with open(self.system_message_file, "w") as f:
             f.write("You are a helpful AI assistant.")
-        self.context_file = tempfile.NamedTemporaryFile(delete=False)
-        with open(self.context_file.name, "w") as f:
+        self.context_file = os.path.join(self.temp_dir.name, "context")
+        with open(self.context_file, "w") as f:
             f.write("Context: ")
-        self.files_file = tempfile.NamedTemporaryFile(delete=False)
-        self.output_file = tempfile.NamedTemporaryFile(delete=False)
+        self.files_file = os.path.join(self.temp_dir.name, "files")
+        # with open(self.files_file, "w") as f:
+        #     f.write("")
+        self.output_file = os.path.join(self.temp_dir.name, "output")
+        # with open(self.output_file, "w") as f:
+        #     f.write("")
         self.nvim_path = shutil.which("nvim")
         
         # Get path to the Lua script
@@ -34,12 +41,12 @@ class LLM_PLX():
                 result = subprocess.run(
                     [
                         self.nvim_path,
-                        "-c", f"let g:prompt_file = '{self.prompt_file.name}'",
-                        "-c", f"let g:files_file = '{self.files_file.name}'",
-                        "-c", f"let g:context_file = '{self.context_file.name}'",
+                        "-c", f"let g:prompt_file = '{self.prompt_file}'",
+                        "-c", f"let g:files_file = '{self.files_file}'",
+                        "-c", f"let g:context_file = '{self.context_file}'",
                         "-c", f"let g:lua_script_path = '{self.lua_script_path}'",
                         "-S", self.prompt_script_path,
-                        self.system_message_file.name,
+                        self.system_message_file,
                     ],
                     stdin=sys.stdin,
                     stdout=sys.stdout,
@@ -48,9 +55,9 @@ class LLM_PLX():
                     break
                 
                 # Read content from the files
-                with open(self.prompt_file.name, "r") as f:
+                with open(self.prompt_file, "r") as f:
                     prompt = f.read().strip()
-                with open(self.system_message_file.name, "r") as f:
+                with open(self.system_message_file, "r") as f:
                     system_message = f.read().strip()
                 
                 # Query the AI model
@@ -62,30 +69,24 @@ class LLM_PLX():
                     continue
                 
                 # Create temporary file for output
-                with open(self.output_file.name, "w") as f:
+                with open(self.output_file, "w") as f:
                     f.write(response)
                 
                 # Display the response in neovim (also include context popup functionality)
                 subprocess.run(
                     [
                         self.nvim_path,
-                        "-c", f"let g:context_file = '{self.context_file.name}'",
+                        "-c", f"let g:context_file = '{self.context_file}'",
                         "-c", f"let g:lua_script_path = '{self.lua_script_path}'",
                         "-S", self.output_script_path,
-                        self.output_file.name,
+                        self.output_file,
                     ],
                     stdin=sys.stdin,
                     stdout=sys.stdout,
                 )
         finally:
-            # Clean up temporary files
-            for file in [self.prompt_file.name, self.system_message_file.name, 
-                        self.files_file.name, self.context_file.name, 
-                        self.output_file.name]:
-                try:
-                    os.unlink(file)
-                except (NameError, OSError):
-                    pass
+            # Clean up temporary directory
+            self.temp_dir.cleanup()
 
 def main():
     env_init()
