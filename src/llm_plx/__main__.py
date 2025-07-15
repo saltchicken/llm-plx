@@ -27,8 +27,8 @@ def main():
 
     try:
         while True:
-            # nvim_path = subprocess.check_output(["which", "nvim"], text=True).strip()
-            nvim_path = "/opt/nvim-linux-x86_64/bin/nvim"
+            nvim_path = subprocess.check_output(["which", "nvim"], text=True).strip()
+            # nvim_path = "/opt/nvim-linux-x86_64/bin/nvim"
             result = subprocess.run(
                 [
                     nvim_path,
@@ -67,6 +67,7 @@ def main():
                 system_message = f.read().strip()
 
             # Query the AI model
+            print("Querying AI model...", end="", flush=True)
             response, debug_string = ollama_query(model, prompt, system_message, host)
 
             # Create temporary file for output
